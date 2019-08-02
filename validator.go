@@ -734,12 +734,14 @@ func PrependPathToErrors(err error, path string) error {
 	return err
 }
 
+// ValidateStruct use tags for fields.
+// result will be equal to `false` if there are any errors.
 func ValidateStruct(s interface{}) (bool, error) {
 	return ValidateStructCtx(context.Background(), s)
 }
 
-// ValidateStruct use tags for fields.
-// result will be equal to `false` if there are any errors.
+// ValidateStructCtx allows controlling the context used for
+// CustomTypeValidator functions
 func ValidateStructCtx(ctx context.Context, s interface{}) (bool, error) {
 	if s == nil {
 		return true, nil
