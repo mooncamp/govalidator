@@ -9,12 +9,6 @@ import (
 )
 
 func init() {
-	CustomTypeTagMap.Set("customFalseValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return false
-	}))
-	CustomTypeTagMap.Set("customTrueValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return true
-	}))
 }
 
 func TestIsAlpha(t *testing.T) {
@@ -2418,22 +2412,30 @@ func TestCustomValidator(t *testing.T) {
 		Field int `valid:"customTrueValidator,required"`
 	}
 
-	if valid, err := ValidateStruct(&ValidStruct{Field: 1}); !valid || err != nil {
+	vd := New()
+	vd.AddCustomTypeTagFn("customFalseValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+		return false
+	}))
+	vd.AddCustomTypeTagFn("customTrueValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+		return true
+	}))
+
+	if valid, err := vd.ValidateStruct(&ValidStruct{Field: 1}); !valid || err != nil {
 		t.Errorf("Got an unexpected result for struct with custom always true validator: %t %s", valid, err)
 	}
 
-	if valid, err := ValidateStruct(&InvalidStruct{Field: 1}); valid || err == nil || err.Error() != "Value: 1 Custom validator error: customFalseValidator" {
+	if valid, err := vd.ValidateStruct(&InvalidStruct{Field: 1}); valid || err == nil || err.Error() != "Value: 1 Custom validator error: customFalseValidator" {
 		fmt.Println(err)
 		t.Errorf("Got an unexpected result for struct with custom always false validator: %t %s", valid, err)
 	}
 
 	mixedStruct := StructWithCustomAndBuiltinValidator{}
-	if valid, err := ValidateStruct(&mixedStruct); valid || err == nil || err.Error() != "Field: non zero value required" {
+	if valid, err := vd.ValidateStruct(&mixedStruct); valid || err == nil || err.Error() != "Field: non zero value required" {
 		t.Errorf("Got an unexpected result for invalid struct with custom and built-in validators: %t %s", valid, err)
 	}
 
 	mixedStruct.Field = 1
-	if valid, err := ValidateStruct(&mixedStruct); !valid || err != nil {
+	if valid, err := vd.ValidateStruct(&mixedStruct); !valid || err != nil {
 		t.Errorf("Got an unexpected result for valid struct with custom and built-in validators: %t %s", valid, err)
 	}
 }
@@ -2449,8 +2451,10 @@ type StructWithCustomByteArray struct {
 func TestStructWithCustomByteArray(t *testing.T) {
 	t.Parallel()
 
+	vd := New()
+
 	// add our custom byte array validator that fails when the byte array is pristine (all zeroes)
-	CustomTypeTagMap.Set("customByteArrayValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("customByteArrayValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
 			if len(v.Email) > 0 {
@@ -2472,7 +2476,7 @@ func TestStructWithCustomByteArray(t *testing.T) {
 		}
 		return false
 	}))
-	CustomTypeTagMap.Set("customMinLengthValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("customMinLengthValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
 			return len(v.ID) >= v.CustomMinLength
@@ -2491,7 +2495,7 @@ func TestStructWithCustomByteArray(t *testing.T) {
 	}
 	SetFieldsRequiredByDefault(true)
 	for _, test := range tests {
-		actual, err := ValidateStruct(test.param)
+		actual, err := vd.ValidateStruct(test.param)
 		if actual != test.expected {
 			t.Errorf("Expected ValidateStruct(%q) to be %v, got %v", test.param, test.expected, actual)
 			if err != nil {
@@ -2865,7 +2869,7 @@ func TestValidateStruct(t *testing.T) {
 		}
 	}
 
-	TagMap["d_k"] = Validator(func(str string) bool {
+	TagMap["d_k"] = ValidatorFn(func(str string) bool {
 		return str == "d_k"
 	})
 	result, err := ValidateStruct(PrivateStruct{"d_k", 0, []int{1, 2}, []string{"hi", "super"}, [2]Address{{"Street", "123456"},
@@ -3096,7 +3100,9 @@ func TestErrorsByField(t *testing.T) {
 		ID    string `valid:"falseValidation"`
 	}
 
-	CustomTypeTagMap.Set("falseValidation", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd := New()
+
+	vd.AddCustomTypeTagFn("falseValidation", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return false
 	}))
 
@@ -3108,7 +3114,7 @@ func TestErrorsByField(t *testing.T) {
 		{"ID", "duck13126 does not validate as falseValidation"},
 	}
 	s := &StructWithCustomValidation{Email: "My123", ID: "duck13126"}
-	_, err = ValidateStruct(s)
+	_, err = vd.ValidateStruct(s)
 	errs = ErrorsByField(err)
 	if len(errs) != 2 {
 		t.Errorf("There should only be 2 errors but got %v", len(errs))
@@ -3164,7 +3170,7 @@ func ExampleValidateStruct() {
 	post := &Post{"My Example Post", "duck", "123.234.54.3"}
 
 	//Add your own struct validation tags
-	TagMap["duck"] = Validator(func(str string) bool {
+	TagMap["duck"] = ValidatorFn(func(str string) bool {
 		return str == "duck"
 	})
 
@@ -3327,7 +3333,8 @@ func TestIsCIDR(t *testing.T) {
 
 func TestOptionalCustomValidators(t *testing.T) {
 
-	CustomTypeTagMap.Set("f2", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd := New()
+	vd.AddCustomTypeTagFn("f2", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return false
 	}))
 
@@ -3337,7 +3344,7 @@ func TestOptionalCustomValidators(t *testing.T) {
 		OptionalFirst      string `valid:"optional,f2"`
 	}
 
-	ok, err := ValidateStruct(val)
+	ok, err := vd.ValidateStruct(val)
 
 	if err != nil {
 		t.Errorf("Expected nil err with optional validation, got %v", err)

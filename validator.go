@@ -734,15 +734,28 @@ func PrependPathToErrors(err error, path string) error {
 	return err
 }
 
-// ValidateStruct use tags for fields.
-// result will be equal to `false` if there are any errors.
 func ValidateStruct(s interface{}) (bool, error) {
 	return ValidateStructCtx(context.Background(), s)
 }
 
+func ValidateStructCtx(ctx context.Context, s interface{}) (bool, error) {
+	vd := &validator{CustomTypeTagMap: &customTypeTagMap{validators: make(map[string]CustomTypeValidator)}}
+	return vd.ValidateStructCtx(ctx, s)
+}
+
+func (vd *validator) AddCustomTypeTagFn(tagName string, validatorFn CustomTypeValidator) {
+	vd.CustomTypeTagMap.validators[tagName] = validatorFn
+}
+
+// ValidateStruct use tags for fields.
+// result will be equal to `false` if there are any errors.
+func (vd *validator) ValidateStruct(s interface{}) (bool, error) {
+	return vd.ValidateStructCtx(context.Background(), s)
+}
+
 // ValidateStructCtx allows controlling the context used for
 // CustomTypeValidator functions
-func ValidateStructCtx(ctx context.Context, s interface{}) (bool, error) {
+func (vd *validator) ValidateStructCtx(ctx context.Context, s interface{}) (bool, error) {
 	if s == nil {
 		return true, nil
 	}
@@ -771,13 +784,13 @@ func ValidateStructCtx(ctx context.Context, s interface{}) (bool, error) {
 			(valueField.Kind() == reflect.Ptr && valueField.Elem().Kind() == reflect.Struct)) &&
 			typeField.Tag.Get(tagName) != "-" {
 			var err error
-			structResult, err = ValidateStructCtx(ctx, valueField.Interface())
+			structResult, err = vd.ValidateStructCtx(ctx, valueField.Interface())
 			if err != nil {
 				err = PrependPathToErrors(err, typeField.Name)
 				errs = append(errs, err)
 			}
 		}
-		resultField, err2 := typeCheck(ctx, valueField, typeField, val, nil)
+		resultField, err2 := vd.typeCheck(ctx, valueField, typeField, val, nil)
 		if err2 != nil {
 
 			// Replace structure name with JSON name if there is a tag on the variable
@@ -995,7 +1008,7 @@ func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap
 	return true, nil
 }
 
-func typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o reflect.Value, options tagOptionsMap) (isValid bool, resultErr error) {
+func (vd *validator) typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o reflect.Value, options tagOptionsMap) (isValid bool, resultErr error) {
 	if !v.IsValid() {
 		return false, nil
 	}
@@ -1034,7 +1047,7 @@ func typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o re
 	optionsOrder := options.orderedKeys()
 	for _, validatorName := range optionsOrder {
 		validatorStruct := options[validatorName]
-		if validatefunc, ok := CustomTypeTagMap.Get(validatorName); ok {
+		if validatefunc, ok := vd.CustomTypeTagMap.Get(validatorName); ok {
 			delete(options, validatorName)
 
 			if result := validatefunc(ctx, v.Interface(), o.Interface()); !result {
@@ -1162,12 +1175,12 @@ func typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o re
 			var resultItem bool
 			var err error
 			if v.MapIndex(k).Kind() != reflect.Struct {
-				resultItem, err = typeCheck(ctx, v.MapIndex(k), t, o, options)
+				resultItem, err = vd.typeCheck(ctx, v.MapIndex(k), t, o, options)
 				if err != nil {
 					return false, err
 				}
 			} else {
-				resultItem, err = ValidateStructCtx(ctx, v.MapIndex(k).Interface())
+				resultItem, err = vd.ValidateStructCtx(ctx, v.MapIndex(k).Interface())
 				if err != nil {
 					err = PrependPathToErrors(err, t.Name+"."+sv[i].Interface().(string))
 					return false, err
@@ -1182,12 +1195,12 @@ func typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o re
 			var resultItem bool
 			var err error
 			if v.Index(i).Kind() != reflect.Struct {
-				resultItem, err = typeCheck(ctx, v.Index(i), t, o, options)
+				resultItem, err = vd.typeCheck(ctx, v.Index(i), t, o, options)
 				if err != nil {
 					return false, err
 				}
 			} else {
-				resultItem, err = ValidateStructCtx(ctx, v.Index(i).Interface())
+				resultItem, err = vd.ValidateStructCtx(ctx, v.Index(i).Interface())
 				if err != nil {
 					err = PrependPathToErrors(err, t.Name+"."+strconv.Itoa(i))
 					return false, err
@@ -1201,15 +1214,15 @@ func typeCheck(ctx context.Context, v reflect.Value, t reflect.StructField, o re
 		if v.IsNil() {
 			return true, nil
 		}
-		return ValidateStructCtx(ctx, v.Interface())
+		return vd.ValidateStructCtx(ctx, v.Interface())
 	case reflect.Ptr:
 		// If the value is a pointer then check its element
 		if v.IsNil() {
 			return true, nil
 		}
-		return typeCheck(ctx, v.Elem(), t, o, options)
+		return vd.typeCheck(ctx, v.Elem(), t, o, options)
 	case reflect.Struct:
-		return ValidateStructCtx(ctx, v.Interface())
+		return vd.ValidateStructCtx(ctx, v.Interface())
 	default:
 		return false, &UnsupportedTypeError{v.Type()}
 	}

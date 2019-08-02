@@ -8,8 +8,27 @@ import (
 	"sync"
 )
 
-// Validator is a wrapper for a validator function that returns bool and accepts string.
-type Validator func(str string) bool
+type Validator interface {
+	ValidateStruct(interface{}) (bool, error)
+	ValidateStructCtx(context.Context, interface{}) (bool, error)
+	AddCustomTypeTagFn(string, CustomTypeValidator)
+}
+
+type validator struct {
+	// CustomTypeTagMap is a map of functions that can be used as tags for ValidateStruct function.
+	// Use this to validate compound or custom types that need to be handled as a whole, e.g.
+	// `type UUID [16]byte` (this would be handled as an array of bytes).
+	CustomTypeTagMap *customTypeTagMap
+}
+
+func New() Validator {
+	return &validator{
+		CustomTypeTagMap: &customTypeTagMap{validators: make(map[string]CustomTypeValidator)},
+	}
+}
+
+// ValidatorFn is a wrapper for a validator function that returns bool and accepts string.
+type ValidatorFn func(str string) bool
 
 // CustomTypeValidator is a wrapper for validator functions that returns bool and accepts any type.
 // The second parameter should be the context (in the case of validating a struct: the whole object being validated).
@@ -88,13 +107,8 @@ func (tm *customTypeTagMap) Set(name string, ctv CustomTypeValidator) {
 	tm.validators[name] = ctv
 }
 
-// CustomTypeTagMap is a map of functions that can be used as tags for ValidateStruct function.
-// Use this to validate compound or custom types that need to be handled as a whole, e.g.
-// `type UUID [16]byte` (this would be handled as an array of bytes).
-var CustomTypeTagMap = &customTypeTagMap{validators: make(map[string]CustomTypeValidator)}
-
-// TagMap is a map of functions, that can be used as tags for ValidateStruct function.
-var TagMap = map[string]Validator{
+// Tagmap is a map of functions, that can be used as tags for ValidateStruct function.
+var TagMap = map[string]ValidatorFn{
 	"email":              IsEmail,
 	"url":                IsURL,
 	"dialstring":         IsDialString,
