@@ -1002,7 +1002,7 @@ func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap
 		}
 		return false, Error{t.Name, fmt.Errorf("non zero value required"), false, "required", []string{}}
 	} else if _, isOptional := options["optional"]; fieldsRequiredByDefault && !isOptional {
-		return false, Error{t.Name, fmt.Errorf("Missing required field"), false, "required", []string{}}
+		return false, Error{t.Name, fmt.Errorf("missing required field"), false, "required", []string{}}
 	}
 	// not required and empty is valid
 	return true, nil
@@ -1022,7 +1022,7 @@ func (vd *validator) typeCheck(ctx context.Context, v reflect.Value, t reflect.S
 			if !fieldsRequiredByDefault {
 				return true, nil
 			}
-			return false, Error{t.Name, fmt.Errorf("All fields are required to at least have one validation defined"), false, "required", []string{}}
+			return false, Error{t.Name, fmt.Errorf("all fields are required to at least have one validation defined"), false, "required", []string{}}
 		}
 	case "-":
 		return true, nil
@@ -1075,7 +1075,7 @@ func (vd *validator) typeCheck(ctx context.Context, v reflect.Value, t reflect.S
 				for _, validator := range optionsOrder {
 					isValid = false
 					resultErr = Error{t.Name, fmt.Errorf(
-						"The following validator is invalid or can't be applied to the field: %q", validator), false, stripParams(validator), []string{}}
+						"the following validator is invalid or can't be applied to the field: %q", validator), false, stripParams(validator), []string{}}
 					return
 				}
 			}
@@ -1272,9 +1272,9 @@ func ErrorsByField(e error) map[string]string {
 	}
 	// prototype for ValidateStruct
 
-	switch e.(type) {
+	switch typed := e.(type) {
 	case Error:
-		m[e.(Error).Name] = e.(Error).Err.Error()
+		m[typed.Name] = typed.Err.Error()
 	case Errors:
 		for _, item := range e.(Errors).Errors() {
 			n := ErrorsByField(item)

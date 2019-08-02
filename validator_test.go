@@ -2394,8 +2394,8 @@ func TestInvalidValidator(t *testing.T) {
 
 	invalidStruct := InvalidStruct{1}
 	if valid, err := ValidateStruct(&invalidStruct); valid || err == nil ||
-		err.Error() != `Field: The following validator is invalid or can't be applied to the field: "someInvalidValidator"` {
-		t.Errorf("Got an unexpected result for struct with invalid validator: %t %s", valid, err)
+		err.Error() != `Field: the following validator is invalid or can't be applied to the field: "someInvalidValidator"` {
+		t.Errorf("got an unexpected result for struct with invalid validator: %t %s", valid, err)
 	}
 }
 
@@ -3266,7 +3266,7 @@ func TestValidateStructParamValidatorInt(t *testing.T) {
 
 	test3Ok1 := &Test2{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 	test3Ok2 := &Test2{10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}
-	test3NotOk := &Test2{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	test3NotOk := &Test3{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
 
 	_, err = ValidateStruct(test3Ok1)
 	if err != nil {
