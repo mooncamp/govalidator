@@ -1,6 +1,7 @@
 package govalidator
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,10 +9,10 @@ import (
 )
 
 func init() {
-	CustomTypeTagMap.Set("customFalseValidator", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("customFalseValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return false
 	}))
-	CustomTypeTagMap.Set("customTrueValidator", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("customTrueValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return true
 	}))
 }
@@ -1020,53 +1021,53 @@ func TestIsNull(t *testing.T) {
 }
 
 func TestHasWhitespaceOnly(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    var tests = []struct {
-        param    string
-        expected bool
-    }{
-        {"abacaba", false},
-        {"", false},
-        {"    ", true},
-        {"  \r\n  ", true},
-        {"\014\012\011\013\015", true},
-        {"\014\012\011\013 abc  \015", false},
-        {"\f\n\t\v\r\f", true},
-        {"x\n\t\t\t\t", false},
-        {"\f\n\t  \n\n\n   \v\r\f", true},
-    }
-    for _, test := range tests {
-        actual := HasWhitespaceOnly(test.param)
-        if actual != test.expected {
-            t.Errorf("Expected HasWhitespaceOnly(%q) to be %v, got %v", test.param, test.expected, actual)
-        }
-    }
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"abacaba", false},
+		{"", false},
+		{"    ", true},
+		{"  \r\n  ", true},
+		{"\014\012\011\013\015", true},
+		{"\014\012\011\013 abc  \015", false},
+		{"\f\n\t\v\r\f", true},
+		{"x\n\t\t\t\t", false},
+		{"\f\n\t  \n\n\n   \v\r\f", true},
+	}
+	for _, test := range tests {
+		actual := HasWhitespaceOnly(test.param)
+		if actual != test.expected {
+			t.Errorf("Expected HasWhitespaceOnly(%q) to be %v, got %v", test.param, test.expected, actual)
+		}
+	}
 }
 
 func TestHasWhitespace(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    var tests = []struct {
-        param    string
-        expected bool
-    }{
-        {"abacaba", false},
-        {"", false},
-        {"    ", true},
-        {"  \r\n  ", true},
-        {"\014\012\011\013\015", true},
-        {"\014\012\011\013 abc  \015", true},
-        {"\f\n\t\v\r\f", true},
-        {"x\n\t\t\t\t", true},
-        {"\f\n\t  \n\n\n   \v\r\f", true},
-    }
-    for _, test := range tests {
-        actual := HasWhitespace(test.param)
-        if actual != test.expected {
-            t.Errorf("Expected HasWhitespace(%q) to be %v, got %v", test.param, test.expected, actual)
-        }
-    }
+	var tests = []struct {
+		param    string
+		expected bool
+	}{
+		{"abacaba", false},
+		{"", false},
+		{"    ", true},
+		{"  \r\n  ", true},
+		{"\014\012\011\013\015", true},
+		{"\014\012\011\013 abc  \015", true},
+		{"\f\n\t\v\r\f", true},
+		{"x\n\t\t\t\t", true},
+		{"\f\n\t  \n\n\n   \v\r\f", true},
+	}
+	for _, test := range tests {
+		actual := HasWhitespace(test.param)
+		if actual != test.expected {
+			t.Errorf("Expected HasWhitespace(%q) to be %v, got %v", test.param, test.expected, actual)
+		}
+	}
 }
 
 func TestIsDivisibleBy(t *testing.T) {
@@ -2449,7 +2450,7 @@ func TestStructWithCustomByteArray(t *testing.T) {
 	t.Parallel()
 
 	// add our custom byte array validator that fails when the byte array is pristine (all zeroes)
-	CustomTypeTagMap.Set("customByteArrayValidator", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("customByteArrayValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
 			if len(v.Email) > 0 {
@@ -2471,7 +2472,7 @@ func TestStructWithCustomByteArray(t *testing.T) {
 		}
 		return false
 	}))
-	CustomTypeTagMap.Set("customMinLengthValidator", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("customMinLengthValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
 			return len(v.ID) >= v.CustomMinLength
@@ -2842,7 +2843,7 @@ func TestValidateStruct(t *testing.T) {
 		param    interface{}
 		expected bool
 	}{
-		{User{"John", "john@yahoo.com", "123G#678", 20, &Address{"Street", "ABC456D89"},    []Address{{"Street", "123456"}, {"Street", "123456"}}}, false},
+		{User{"John", "john@yahoo.com", "123G#678", 20, &Address{"Street", "ABC456D89"}, []Address{{"Street", "123456"}, {"Street", "123456"}}}, false},
 		{User{"John", "john!yahoo.com", "12345678", 20, &Address{"Street", "ABC456D89"}, []Address{{"Street", "ABC456D89"}, {"Street", "123456"}}}, false},
 		{User{"John", "", "12345", 0, &Address{"Street", "123456789"}, []Address{{"Street", "ABC456D89"}, {"Street", "123456"}}}, false},
 		{UserValid{"John", "john@yahoo.com", "123G#678", 20, &Address{"Street", "123456"}, []Address{{"Street", "123456"}, {"Street", "123456"}}}, true},
@@ -3095,7 +3096,7 @@ func TestErrorsByField(t *testing.T) {
 		ID    string `valid:"falseValidation"`
 	}
 
-	CustomTypeTagMap.Set("falseValidation", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("falseValidation", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return false
 	}))
 
@@ -3239,67 +3240,67 @@ func TestValidateStructParamValidatorInt(t *testing.T) {
 	if err == nil {
 		t.Errorf("Test failed: nil")
 	}
-	
+
 	type Test3 struct {
-        Int   int   `valid:"in(1|10),int"`
-        Int8  int8  `valid:"in(1|10),int8"`
-        Int16 int16 `valid:"in(1|10),int16"`
-        Int32 int32 `valid:"in(1|10),int32"`
-        Int64 int64 `valid:"in(1|10),int64"`
+		Int   int   `valid:"in(1|10),int"`
+		Int8  int8  `valid:"in(1|10),int8"`
+		Int16 int16 `valid:"in(1|10),int16"`
+		Int32 int32 `valid:"in(1|10),int32"`
+		Int64 int64 `valid:"in(1|10),int64"`
 
-        Uint   uint   `valid:"in(1|10),uint"`
-        Uint8  uint8  `valid:"in(1|10),uint8"`
-        Uint16 uint16 `valid:"in(1|10),uint16"`
-        Uint32 uint32 `valid:"in(1|10),uint32"`
-        Uint64 uint64 `valid:"in(1|10),uint64"`
+		Uint   uint   `valid:"in(1|10),uint"`
+		Uint8  uint8  `valid:"in(1|10),uint8"`
+		Uint16 uint16 `valid:"in(1|10),uint16"`
+		Uint32 uint32 `valid:"in(1|10),uint32"`
+		Uint64 uint64 `valid:"in(1|10),uint64"`
 
-        Float32 float32 `valid:"in(1|10),float32"`
-        Float64 float64 `valid:"in(1|10),float64"`
-    }
+		Float32 float32 `valid:"in(1|10),float32"`
+		Float64 float64 `valid:"in(1|10),float64"`
+	}
 
-    test3Ok1 := &Test2{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-    test3Ok2 := &Test2{10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}
-    test3NotOk := &Test2{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	test3Ok1 := &Test2{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	test3Ok2 := &Test2{10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}
+	test3NotOk := &Test2{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
 
-    _, err = ValidateStruct(test3Ok1)
-    if err != nil {
-        t.Errorf("Test failed: %s", err)
-    }
+	_, err = ValidateStruct(test3Ok1)
+	if err != nil {
+		t.Errorf("Test failed: %s", err)
+	}
 
-    _, err = ValidateStruct(test3Ok2)
-    if err != nil {
-        t.Errorf("Test failed: %s", err)
-    }
+	_, err = ValidateStruct(test3Ok2)
+	if err != nil {
+		t.Errorf("Test failed: %s", err)
+	}
 
-    _, err = ValidateStruct(test3NotOk)
-    if err == nil {
-        t.Errorf("Test failed: nil")
-    }
+	_, err = ValidateStruct(test3NotOk)
+	if err == nil {
+		t.Errorf("Test failed: nil")
+	}
 }
 
 func TestValidateStructUpperAndLowerCaseWithNumTypeCheck(t *testing.T) {
 
-    type StructCapital struct {
-        Total float32 `valid:"float,required"`
-    }
-    
-    structCapital := &StructCapital{53.3535}
-    _, err := ValidateStruct(structCapital)
-    if err != nil {
-        t.Errorf("Test failed: nil")
-        fmt.Println(err)
-    }
-    
-    type StructLower struct {
-        total float32 `valid:"float,required"`
-    }
-    
-    structLower := &StructLower{53.3535}
-    _, err = ValidateStruct(structLower)
-    if err != nil {
-        t.Errorf("Test failed: nil")
-        fmt.Println(err)
-    }
+	type StructCapital struct {
+		Total float32 `valid:"float,required"`
+	}
+
+	structCapital := &StructCapital{53.3535}
+	_, err := ValidateStruct(structCapital)
+	if err != nil {
+		t.Errorf("Test failed: nil")
+		fmt.Println(err)
+	}
+
+	type StructLower struct {
+		total float32 `valid:"float,required"`
+	}
+
+	structLower := &StructLower{53.3535}
+	_, err = ValidateStruct(structLower)
+	if err != nil {
+		t.Errorf("Test failed: nil")
+		fmt.Println(err)
+	}
 }
 
 func TestIsCIDR(t *testing.T) {
@@ -3326,7 +3327,7 @@ func TestIsCIDR(t *testing.T) {
 
 func TestOptionalCustomValidators(t *testing.T) {
 
-	CustomTypeTagMap.Set("f2", CustomTypeValidator(func(i interface{}, o interface{}) bool {
+	CustomTypeTagMap.Set("f2", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
 		return false
 	}))
 
