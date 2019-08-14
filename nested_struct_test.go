@@ -17,9 +17,9 @@ func TestMooncampNestedStruct(t *testing.T) {
 	}
 
 	vd := New()
-	vd.AddCustomTypeTagFn("childless", func(ctx context.Context, in interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("childless", func(ctx context.Context, in interface{}, o interface{}) (bool, error) {
 		node := in.(*Node)
-		return node.Child == nil
+		return node.Child == nil, nil
 	})
 
 	ok, err := vd.ValidateStruct(input)
@@ -50,9 +50,9 @@ func TestMooncampNestedStructWithError(t *testing.T) {
 	}
 
 	vd := New()
-	vd.AddCustomTypeTagFn("childless", func(ctx context.Context, in interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("childless", func(ctx context.Context, in interface{}, o interface{}) (bool, error) {
 		node := in.(*Node)
-		return node.Child == nil
+		return node.Child == nil, nil
 	})
 
 	ok, err := vd.ValidateStruct(input)

@@ -1050,12 +1050,13 @@ func (vd *validator) typeCheck(ctx context.Context, v reflect.Value, t reflect.S
 		if validatefunc, ok := vd.CustomTypeTagMap.Get(validatorName); ok {
 			delete(options, validatorName)
 
-			if result := validatefunc(ctx, v.Interface(), o.Interface()); !result {
+			if result, err := validatefunc(ctx, v.Interface(), o.Interface()); !result {
 				if len(validatorStruct.customErrorMessage) > 0 {
 					customTypeErrors = append(customTypeErrors, Error{Name: t.Name, Err: TruncatingErrorf(validatorStruct.customErrorMessage, fmt.Sprint(v), validatorName), CustomErrorMessageExists: true, Validator: stripParams(validatorName)})
 					continue
 				}
-				customTypeErrors = append(customTypeErrors, Error{Name: t.Name, Err: fmt.Errorf("%s does not validate as %s", fmt.Sprint(v), validatorName), CustomErrorMessageExists: false, Validator: stripParams(validatorName)})
+
+				customTypeErrors = append(customTypeErrors, Error{Name: t.Name, Err: fmt.Errorf("%s does not validate as %s: %v", fmt.Sprint(v), validatorName, err), CustomErrorMessageExists: false, Validator: stripParams(validatorName)})
 			}
 		}
 	}

@@ -2413,11 +2413,11 @@ func TestCustomValidator(t *testing.T) {
 	}
 
 	vd := New()
-	vd.AddCustomTypeTagFn("customFalseValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return false
+	vd.AddCustomTypeTagFn("customFalseValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
+		return false, nil
 	}))
-	vd.AddCustomTypeTagFn("customTrueValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return true
+	vd.AddCustomTypeTagFn("customTrueValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
+		return true, nil
 	}))
 
 	if valid, err := vd.ValidateStruct(&ValidStruct{Field: 1}); !valid || err != nil {
@@ -2454,7 +2454,7 @@ func TestStructWithCustomByteArray(t *testing.T) {
 	vd := New()
 
 	// add our custom byte array validator that fails when the byte array is pristine (all zeroes)
-	vd.AddCustomTypeTagFn("customByteArrayValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("customByteArrayValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
 			if len(v.Email) > 0 {
@@ -2470,18 +2470,18 @@ func TestStructWithCustomByteArray(t *testing.T) {
 		case CustomByteArray:
 			for _, e := range v { // check if v is empty, i.e. all zeroes
 				if e != 0 {
-					return true
+					return true, nil
 				}
 			}
 		}
-		return false
+		return false, nil
 	}))
-	vd.AddCustomTypeTagFn("customMinLengthValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
+	vd.AddCustomTypeTagFn("customMinLengthValidator", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
 		switch v := o.(type) {
 		case StructWithCustomByteArray:
-			return len(v.ID) >= v.CustomMinLength
+			return len(v.ID) >= v.CustomMinLength, nil
 		}
-		return false
+		return false, nil
 	}))
 	testCustomByteArray := CustomByteArray{'1', '2', '3', '4', '5', '6'}
 	var tests = []struct {
@@ -3102,8 +3102,8 @@ func TestErrorsByField(t *testing.T) {
 
 	vd := New()
 
-	vd.AddCustomTypeTagFn("falseValidation", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return false
+	vd.AddCustomTypeTagFn("falseValidation", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
+		return false, nil
 	}))
 
 	tests = []struct {
@@ -3111,7 +3111,7 @@ func TestErrorsByField(t *testing.T) {
 		expected string
 	}{
 		{"Email", "My123 does not validate as email"},
-		{"ID", "duck13126 does not validate as falseValidation"},
+		{"ID", "duck13126 does not validate as falseValidation: <nil>"},
 	}
 	s := &StructWithCustomValidation{Email: "My123", ID: "duck13126"}
 	_, err = vd.ValidateStruct(s)
@@ -3334,8 +3334,8 @@ func TestIsCIDR(t *testing.T) {
 func TestOptionalCustomValidators(t *testing.T) {
 
 	vd := New()
-	vd.AddCustomTypeTagFn("f2", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) bool {
-		return false
+	vd.AddCustomTypeTagFn("f2", CustomTypeValidator(func(ctx context.Context, i interface{}, o interface{}) (bool, error) {
+		return false, nil
 	}))
 
 	var val struct {

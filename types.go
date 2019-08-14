@@ -32,7 +32,7 @@ type ValidatorFn func(str string) bool
 
 // CustomTypeValidator is a wrapper for validator functions that returns bool and accepts any type.
 // The second parameter should be the context (in the case of validating a struct: the whole object being validated).
-type CustomTypeValidator func(ctx context.Context, i interface{}, o interface{}) bool
+type CustomTypeValidator func(ctx context.Context, i interface{}, o interface{}) (bool, error)
 
 // ParamValidator is a wrapper for validator functions that accepts additional parameters.
 type ParamValidator func(str string, params ...string) bool
